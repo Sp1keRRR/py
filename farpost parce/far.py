@@ -10,6 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 import os.path
+import datetime
 
 
 
@@ -28,6 +29,13 @@ def get_total_pages(html):
 		total_pages = pagelast.split('=')[1]    
 		return int(total_pages)
 
+def write_log(db):
+	daytime = datetime.datetime.today().strftime("%m/%d/%Y")
+	with open('farpost log.txt', 'a') as file:
+		writer = csv.writer(file)
+		writer.writerow((db['daytime'],
+						db['log']))	 
+
 def write_csv(db): 
 	count = 0
 	try:
@@ -38,6 +46,12 @@ def write_csv(db):
 					break
 		if count > 0:
 			print("Юзер "+ db['url_user'] + " уже присутствует")
+			#Лог
+			daytime = datetime.datetime.today().strftime("%Y/%m/%d-%H.%M.%S")
+			log = "Юзер "+ db['url_user'] + " уже присутствует"
+			db = {'daytime':daytime,
+				'log':log}
+			write_log(db)
 		else:
 			with open('farpost.txt', 'a') as file:
 				writer = csv.writer(file)
@@ -76,6 +90,7 @@ def get_page_data(html, driver, captcha):
 			title = ad.find('td', class_='descriptionCell').find('a', class_='bulletinLink auto-shy').contents[0]
 		except:
 			title = ''
+
 		try:
 			ref = ad.find('td', class_='descriptionCell').find('a', class_='bulletinLink auto-shy').get('href')
 			url = "https://www.farpost.ru" + ref
@@ -92,6 +107,12 @@ def get_page_data(html, driver, captcha):
 			if count > 0:
 				#print("Странница "+ url + " открывалась ранее")
 				print('Процесс на странице %d%%' % (i/len(ads)*100))
+				#Лог
+				daytime = datetime.datetime.today().strftime("%Y/%m/%d-%H.%M.%S")
+				log = ('Процесс на странице %d%%' % (i/len(ads)*100))
+				db = {'daytime':daytime,
+					'log':log}
+				write_log(db)
 				#time.sleep(30)
 				continue
 		else:
@@ -100,23 +121,35 @@ def get_page_data(html, driver, captcha):
 		driver.get(url)
 		#Капча при переходе на другую страницу
 		if driver.current_url != url:
-			print('Введите капчу для продолжения работы (10 мин)')
-			try:
-				element = WebDriverWait(driver, 600).until(
-					EC.presence_of_element_located((By.XPATH,'//a[@class="button bigbutton viewbull-summary__button viewbull-summary__button_job"]'))
-				)
-			except:
-				captcha = 2
-				driver.quit()
-				break 
-			finally:
-				if captcha == 2:
-					print('Капча не пройдена')
-					break
-				print('Капча пройдена')
-				driver.get(url)
+			print('Капча...Перезагрузка браузера')
+			#Лог
+			daytime = datetime.datetime.today().strftime("%Y/%m/%d-%H.%M.%S")
+			log = 'Капча...Перезагрузка браузера'
+			db = {'daytime':daytime,
+				'log':log}
+			write_log(db)
+
+			driver.quit()
+			rNum = 120
+			time.sleep(rNum)
+			driver.get(url)
+			# print('Введите капчу для продолжения работы (10 мин)')
+			# try:
+			# 	element = WebDriverWait(driver, 600).until(
+			# 		EC.presence_of_element_located((By.XPATH,'//a[@class="button bigbutton viewbull-summary__button viewbull-summary__button_job"]'))
+			# 	)
+			# except:
+			# 	captcha = 2
+			# 	driver.quit()
+			# 	break 
+			# finally:
+			# 	if captcha == 2:
+			# 		print('Капча не пройдена')
+			# 		break
+			# 	print('Капча пройдена')
+			# 	driver.get(url)
 				
-		rNum = 120
+		rNum = 60
 		time.sleep(rNum)
 
 		try:
@@ -139,8 +172,14 @@ def get_page_data(html, driver, captcha):
 						break
 			if count > 0:
 				#print("Юзер "+ url_user + " уже присутствует")
-				time.sleep(120)
+				time.sleep(60)
 				print('Процесс на странице %d%%' % (i/len(ads)*100))
+				#Лог
+				daytime = datetime.datetime.today().strftime("%Y/%m/%d-%H.%M.%S")
+				log = ('Процесс на странице %d%%' % (i/len(ads)*100))
+				db = {'daytime':daytime,
+					'log':log}
+				write_log(db)
 				continue
 		else:
 			open('farpost.txt', 'a')
@@ -152,6 +191,13 @@ def get_page_data(html, driver, captcha):
 			try:
 				captchaPic = driver.find_element_by_class_name('bzr-captcha__image')
 				print('Введите капчу для продолжения работы (20 секунд)')
+				#Лог
+				daytime = datetime.datetime.today().strftime("%Y/%m/%d-%H.%M.%S")
+				log = 'Введите капчу для продолжения работы (20 секунд)'
+				db = {'daytime':daytime,
+					'log':log}
+				write_log(db)
+
 				time.sleep(20)
 			except:
 				time.sleep(1)
@@ -196,6 +242,12 @@ def get_page_data(html, driver, captcha):
 		write_csv(db)
 		
 		print('Процесс на странице %d%%' % (i/len(ads)*100))
+		#Лог
+		daytime = datetime.datetime.today().strftime("%Y/%m/%d-%H.%M.%S")
+		log = ('Процесс на странице %d%%' % (i/len(ads)*100))
+		db = {'daytime':daytime,
+			'log':log}
+		write_log(db)
 
 		#Через сколько перезагрузка браузера
 		if i % 1000000 == 0:
@@ -234,8 +286,15 @@ def get_html_proxy(url):
 	return p['address']
 
 def main():
-	print('Начало работы программы')
-
+	#Лог
+	log = 'Начало работы программы'
+	daytime = datetime.datetime.today().strftime("%Y/%m/%d-%H.%M.%S")
+	print(log)
+	print(daytime)
+	db = {'daytime':daytime,
+			'log':log}
+	write_log(db)
+	
 	url_arr = []
 	with open('farpost list.txt') as file:
 			for line in file:
@@ -245,7 +304,13 @@ def main():
 	
 	driver = webdriver.Firefox()
 	for url_page in url_arr:
-		print("Странница: " + url_page)
+		print('Странница: ' + url_page)
+		#Лог
+		log = 'Странница: ' + url_page
+		daytime = datetime.datetime.today().strftime("%Y/%m/%d-%H.%M.%S")
+		db = {'daytime':daytime,
+			'log':log}
+		write_log(db)
 
 		base_url = url_page + "?page="
 	
